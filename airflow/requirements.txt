@@ -4,9 +4,11 @@ apache-airflow-providers-postgres
 google-cloud-bigquery
 google-cloud-storage
 scikit-learn
+python-dotenv
 numpy
 xgboost
 pandas
+xgboost
 pandas-gbq
 bs4
 requests

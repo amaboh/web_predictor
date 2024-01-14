@@ -1,6 +1,8 @@
-FROM apache/airflow:2.6.1
+FROM apache/airflow:2.8.0
 
 ENV AIRFLOW_HOME=/opt/airflow
+ENV DATA_DIR = /opt/airflow/data
+ENV PYTHONPATH "${PYTHONPATH}:/opt/airflow/helper"
 
 
 USER root
@@ -42,7 +44,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 SHELL ["/bin/bash", "-o", "pipefail", "-e", "-u", "-x", "-c"]
 
-
 WORKDIR $AIRFLOW_HOME
 
 USER $AIRFLOW_UID
+CMD ["webserver"]
