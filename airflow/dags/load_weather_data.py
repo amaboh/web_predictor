@@ -1,35 +1,17 @@
-import requests
-import datetime
-import json
-import os
-
+from airflow import DAG
+from airflow.decorators import task
 from dotenv import load_dotenv
-from google.cloud.storage.client import Client as storage_client 
-from google.cloud.bigquery.client import Client as bigquery_client 
-from google.cloud.exceptions import Conflict
-
-import pandas as pd
-from xgboost import XGBRegressor
-from sklearn.neural_network import MLPRegressor
-from sklearn.model_selection import train_test_split
-from helper.weather import WeatherPipline
-
+from datetime import datetime, timedelta
 import os
 import sys
 load_dotenv()
-WORK_DIR = os.environ["WORK_DIR"]
+WORK_DIR = os.environ["AIRFLOW_HOME"]
 sys.path.append(f"{WORK_DIR}/airflow")
 
+from weather import WeatherPipline
 
 
-PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
-BUCKET = os.environ.get("GCP_GCS_BUCKET")
-path_to_local_home = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
-
-STORAGE_CLIENT = storage_client()
-BIGQUERY_CLIENT = bigquery_client()
-CURRENT_DATE = datetime.datetime.now().strftime("%Y-%m-%d").replace("-","_")
-
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = f'{WORK_DIR}/config/google_credentials_ngu_a.json'
 
 locations = ["London", "Tokyo", "Sydney", "Paris", "Berlin", "Moscow", "Madrid", "Rome", "Cairo"]
 weather = WeatherPipline(locations)
@@ -67,3 +49,7 @@ with DAG(
 
     # Dependencies
     extract_weather_data() >> load_to_cloudStorage() >> load_to_bigquery("weather", "weather")
+    
+    
+    
+    

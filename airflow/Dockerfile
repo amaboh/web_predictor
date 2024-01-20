@@ -2,7 +2,11 @@ FROM apache/airflow:2.8.0
 
 ENV AIRFLOW_HOME=/opt/airflow
 ENV DATA_DIR = /opt/airflow/data
-ENV PYTHONPATH "${PYTHONPATH}:/opt/airflow/helper"
+ENV AIRFLOW_UID=50000
+ENV AIRFLOW_GID=50000
+ENV GOOGLE_APPLICATION_CREDENTIALS=${AIRFLOW_HOME}/config/google_credentials_ngu_a.json
+
+ENV PYTHONPATH = $AIRFLOW_HOME/helper:$PYTHONPATH
 
 
 USER root
@@ -15,36 +19,40 @@ RUN apt-get update \
         python3-pip \
         python3-dev
 
-ARG CLOUD_SDK_VERSION=322.0.0
-ENV GCLOUD_HOME=/home/google-cloud-sdk
 
-ENV PATH="${GCLOUD_HOME}/bin/:${PATH}"
 
-RUN DOWNLOAD_URL="https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${CLOUD_SDK_VERSION}-linux-x86_64.tar.gz" \
-    && TMP_DIR="$(mktemp -d)" \
-    && curl -fL "${DOWNLOAD_URL}" --output "${TMP_DIR}/google-cloud-sdk.tar.gz" \
-    && mkdir -p "${GCLOUD_HOME}" \
-    && tar xzf "${TMP_DIR}/google-cloud-sdk.tar.gz" -C "${GCLOUD_HOME}" --strip-components=1 \
-    && "${GCLOUD_HOME}/install.sh" \
-       --bash-completion=false \
-       --path-update=false \
-       --usage-reporting=false \
-       --quiet \
-    && rm -rf "${TMP_DIR}" \
-    && gcloud --version
+RUN sudo apt-get install apt-transport-https ca-certificates gnupg 
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list 
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - 
+RUN sudo apt-get update && sudo apt-get install google-cloud-cli 
 
-COPY scripts scripts
-RUN chown -R "${AIRFLOW_UID}:${AIRFLOW_UID}" scripts
-RUN chmod +x scripts
+
+# Create airflow group
+
+# Add airflow user to sudoers
+RUN usermod -aG sudo airflow
+
+# Change password to airflow
+RUN echo "airflow:airflow" | chpasswd 
+
+# Grant sudo permissions to the airflow user
+RUN echo "airflow ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# Grant permissions to the airflow user
+RUN chown -R airflow: ${AIRFLOW_HOME} 
+
+# Create test folder /opt/airflow/tests and airflow.cfg file in /opt/airflow/airflow.cfg
+RUN mkdir -p ${AIRFLOW_HOME}/tests
+ADD airflow.cfg .
+#RUN echo "[core]" >> /opt/airflow/airflow.cfg
+#RUN echo "dags_folder = /opt/airflow/dags,/opt/airflow/helper" >> /opt/airflow/airflow.cfg
 
 
 USER ${AIRFLOW_UID}
 ADD requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-SHELL ["/bin/bash", "-o", "pipefail", "-e", "-u", "-x", "-c"]
 
-WORKDIR $AIRFLOW_HOME
+WORKDIR ${AIRFLOW_HOME}
 
-USER $AIRFLOW_UID
 CMD ["webserver"]

@@ -66,17 +66,14 @@ x-airflow-common: &airflow-common
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
-    _PIP_ADDITIONAL_REQUIREMENTS: ""
-    GOOGLE_APPLICATION_CREDENTIALS: /.google/credentials/google_credentials_ngu_a.json
-    AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT: "google-cloud-platform://?extra__google_cloud_platform__key_path=/.google/credentials/google_credentials_ngu_a.json"
-    GCP_PROJECT_ID: "data-pipes-a"
-    GCP_GCS_BUCKET: "weather_bucket_2024_01_08_data-pipes-a"
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
 
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
-    - ~/.google/credentials/:/.google/credentials:ro
+    - ./airflow.cfg:/opt/airflow/airflow.cfg
+    - ./config:/opt/airflow/config
 
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on: &airflow-common-depends-on
@@ -196,7 +193,6 @@ services:
         mkdir -p /sources/logs /sources/dags /sources/plugins
         chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
         exec /entrypoint airflow version
-       
 
     # yamllint enable rule:line-length
     environment:
